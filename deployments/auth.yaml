@@ -1,0 +1,37 @@
+---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      namespace: kube-system
+      name: irq-smp-balance-sa
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: irq-smp-balance-sa-secret
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: irq-smp-balance-sa
+type: kubernetes.io/service-account-token
+---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: irq-smp-balance
+    rules:
+      - apiGroups: [""]
+        resources: ["pods"]
+        verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: irq-smp-balance-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: irq-smp-balance
+subjects:
+- kind: ServiceAccount
+  name: irq-smp-balance-sa
+  namespace: kube-system
