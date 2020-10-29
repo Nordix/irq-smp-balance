@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 set -e
 
 ORG_PATH="github.com/pperiyasamy"
