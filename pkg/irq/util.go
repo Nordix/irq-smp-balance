@@ -59,7 +59,7 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 }
 
 // The folloing methods are copied from github.com/cri-o/cri-o/internal/runtimehandlerhooks
-// (resuse not possible as runtimehandlerhooks in internal package)
+// (reuse not possible as runtimehandlerhooks in internal package)
 
 // UpdateIRQSmpAffinityMask take input cpus that need to change irq affinity mask and
 // the current mask string, return an update mask string and inverted mask, with those cpus
@@ -173,4 +173,3 @@ func invertByteArray(in []byte) (out []byte) {
 	}
 	return
 }
-

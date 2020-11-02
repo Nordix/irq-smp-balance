@@ -30,6 +30,8 @@ func main() {
 		return
 	}
 
+	logrus.Infof("starting irq-smp-balance in %s", worker)
+
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -56,7 +58,7 @@ func startPODWatcher(clientset *kubernetes.Clientset, worker string) {
 		return
 	}
 	// qosClass is not a supported field selector
-	//TODO: watch for pod delete
+	//TODO: watch pod delete. needs better restructuring of code.
 	watch, err := clientset.CoreV1().Pods("").Watch(context.TODO(), metav1.ListOptions{ResourceVersion: pods.ListMeta.ResourceVersion,
 		LabelSelector: IrqLabelSelector,
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s,status.phase=Running", worker)})
@@ -79,12 +81,12 @@ func startPODWatcher(clientset *kubernetes.Clientset, worker string) {
 				continue
 			}
 			logrus.Infof("%s, %s, %s, %s\n", pod.ObjectMeta.Name, pod.Status.Phase, pod.Status.QOSClass, pod.Spec.NodeName)
-			podCPUs := cms.GetAssignedCpus(string(pod.UID))
+			podCPUs, _ := cms.GetAssignedCpus(string(pod.UID))
+			logrus.Infof("assigned cpus %s for pod %s", podCPUs, pod.UID)
 			if podCPUs != "" {
 				//TODO:
-				irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
+				//irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
 			}
 		}
 	}()
 }
-

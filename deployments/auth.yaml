@@ -14,14 +14,14 @@ metadata:
     kubernetes.io/service-account.name: irq-smp-balance-sa
 type: kubernetes.io/service-account-token
 ---
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRole
-    metadata:
-      name: irq-smp-balance
-    rules:
-      - apiGroups: [""]
-        resources: ["pods"]
-        verbs: ["list", "watch"]
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: irq-smp-balance
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
