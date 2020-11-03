@@ -57,11 +57,15 @@ func (cs *cpuState) getCPUsFromCheckpointV1(podUID string) string {
 }
 
 func (cs *cpuState) getCPUsFromCheckpointV2(podUID string) string {
-	var cpus string
-	for _, cpu := range cs.EntriesV2[podUID] {
-		cpus = cpus + "," + cpu
+	if podCPUs, ok := cs.EntriesV2[podUID]; ok {
+		var cpus string
+		for _, cpu := range podCPUs {
+			cpus = cpus + "," + cpu
+		}
+		return strings.TrimPrefix(cpus, ",")
+	} else {
+		return ""
 	}
-	return strings.TrimPrefix(cpus, ",")
 }
 
 func newCPUManagerCheckpointV1() *state.CPUManagerCheckpointV1 {
@@ -80,7 +84,6 @@ func (cs *cpuState) restoreState() error {
 	checkpointV1 := newCPUManagerCheckpointV1()
 	checkpointV2 := newCPUManagerCheckpointV2()
 	if err := cs.checkpoint.GetCheckpoint(cpuManagerStateFileName, checkpointV1); err != nil {
-		logrus.Infof("error in reading v1 cpu state: %v, trying with v2", err)
 		checkpointV1 = &state.CPUManagerCheckpointV1{}
 		if err = cs.checkpoint.GetCheckpoint(cpuManagerStateFileName, checkpointV2); err == nil {
 			if checkpointV2.PolicyName != string(cpumanager.PolicyStatic) {
