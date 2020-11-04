@@ -51,6 +51,8 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 		logrus.Warnf("irqbalance binary not found: %v", err)
 		return nil
 	}
+	// TODO: seems this command doesn't work and can't see /etc/default/irqbalance
+	// file gets updated. may be to update the file directly.
 	// run irqbalance in daemon mode, so this won't cause delay
 	cmd := exec.Command("irqbalance", "--oneshot")
 	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting

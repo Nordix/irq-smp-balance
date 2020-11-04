@@ -98,7 +98,6 @@ func startPODWatcher(clientset *kubernetes.Clientset, worker string) {
 				}
 				logrus.Infof("pod added: assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
 				if podCPUs != "" {
-					//TODO: test this
 					irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
 				}
 			case watch.Deleted:
@@ -109,7 +108,6 @@ func startPODWatcher(clientset *kubernetes.Clientset, worker string) {
 				}
 				logrus.Infof("pod deleted: assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
 				if podCPUs != "" {
-					//TODO: test this
 					irq.SetIRQLoadBalancing(podCPUs, true, irq.IrqSmpAffinityProcFile)
 				}
 				cms.Remove(podUID)
