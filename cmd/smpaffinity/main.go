@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -9,9 +8,10 @@ import (
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -34,84 +34,88 @@ func main() {
 	logrus.Infof("starting irq-smp-balance in %s", worker)
 
 	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		logrus.Errorf("error with retrieving cluster config %v", err)
-		return
-	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		logrus.Errorf("error with configuring kube client %v", err)
-		return
-	}
+	clientSet := getClient()
 
-	startPODWatcher(clientset, worker)
-
-	// Capture signals to cleanup before exiting
-	<-c
-
-	logrus.Infof("irq-smp-balance is stopped")
-}
-
-func startPODWatcher(clientset *kubernetes.Clientset, worker string) {
-	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		logrus.Errorf("error in listing down the pods %v", err)
-		return
-	}
-	// qosClass is not a supported field selector
-	// TODO: This api doesn't work after some default socket timeout. replace it with a prolonged
-	// watching api.
-	podWatch, err := clientset.CoreV1().Pods("").Watch(context.TODO(), metav1.ListOptions{Watch: true,
-		ResourceVersion: pods.ListMeta.ResourceVersion,
-		LabelSelector:   IrqLabelSelector,
-		FieldSelector:   fmt.Sprintf("spec.nodeName=%s,status.phase=Running", worker)})
-	if err != nil {
-		logrus.Errorf(" error in watching the pods %v", err)
-		return
-	}
 	cms, err := irq.NewCPUManagerService()
 	if err != nil {
 		logrus.Errorf("error retrieving the cpumanager service")
 		return
 	}
 
-	go func() {
-		for event := range podWatch.ResultChan() {
-			pod, ok := event.Object.(*v1.Pod)
-			if !ok {
-				logrus.Errorf("error with pod event")
-				continue
-			}
-			logrus.Infof("%s, %s, %s, %s\n", pod.ObjectMeta.Name, pod.Status.Phase, pod.Status.QOSClass, pod.Spec.NodeName)
-			if pod.Status.QOSClass != v1.PodQOSGuaranteed {
-				logrus.Infof("pod %s is with %s qos class. ignoring", pod.ObjectMeta.Name, pod.Status.QOSClass)
-				continue
-			}
-			podUID := string(pod.UID)
-			switch event.Type {
-			case watch.Added:
-				podCPUs, err := cms.GetAssignedCpus(podUID)
-				if err != nil {
-					logrus.Errorf("error in retrieving assigned cpus for pod %s: %v", pod.ObjectMeta.Name, err)
-				}
-				logrus.Infof("pod added: assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
-				if podCPUs != "" {
-					irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
-				}
-			case watch.Deleted:
-				podCPUs, err := cms.GetAssignedCpus(podUID)
-				if err != nil {
-					logrus.Errorf("error in retrieving assigned cpus for pod %s: %v", pod.ObjectMeta.Name, err)
-					podCPUs = cms.GetAssignedCpusFromCache(podUID)
-				}
-				logrus.Infof("pod deleted: assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
-				if podCPUs != "" {
-					irq.SetIRQLoadBalancing(podCPUs, true, irq.IrqSmpAffinityProcFile)
-				}
-				cms.Remove(podUID)
-			}
-		}
-	}()
+	factory := informers.NewFilteredSharedInformerFactory(clientSet, 0, "", func(o *metav1.ListOptions) {
+		o.LabelSelector = IrqLabelSelector
+		o.FieldSelector = fmt.Sprintf("spec.nodeName=%s,status.phase=Running", worker)
+	})
+	informer := factory.Core().V1().Pods().Informer()
+	stopper := make(chan struct{})
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			handleAddPod(obj.(*v1.Pod), cms)
+
+		},
+		DeleteFunc: func(obj interface{}) {
+			handleDeletePod(obj.(*v1.Pod), cms)
+		},
+	})
+
+	informer.Run(stopper)
+
+	// Capture signals to cleanup before exiting
+	<-c
+
+	close(stopper)
+
+	logrus.Infof("irq-smp-balance is stopped")
+}
+
+func handleAddPod(pod *v1.Pod, cms irq.CPUManagerService) {
+	logrus.Infof("pod added %s, %s, %s, %s\n", pod.ObjectMeta.Name, pod.Status.Phase, pod.Status.QOSClass, pod.Spec.NodeName)
+	if pod.Status.QOSClass != v1.PodQOSGuaranteed {
+		logrus.Infof("pod %s is with %s qos class. ignoring", pod.ObjectMeta.Name, pod.Status.QOSClass)
+		return
+	}
+	podUID := string(pod.UID)
+	podCPUs, err := cms.GetAssignedCpus(podUID)
+	if err != nil {
+		logrus.Errorf("error in retrieving assigned cpus for pod %s: %v", pod.ObjectMeta.Name, err)
+	}
+	logrus.Infof("assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
+	if podCPUs != "" {
+		irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
+	}
+}
+
+func handleDeletePod(pod *v1.Pod, cms irq.CPUManagerService) {
+	logrus.Infof("pod deleted %s, %s, %s, %s\n", pod.ObjectMeta.Name, pod.Status.Phase, pod.Status.QOSClass, pod.Spec.NodeName)
+	if pod.Status.QOSClass != v1.PodQOSGuaranteed {
+		logrus.Infof("pod %s is with %s qos class. ignoring", pod.ObjectMeta.Name, pod.Status.QOSClass)
+		return
+	}
+	podUID := string(pod.UID)
+	podCPUs, err := cms.GetAssignedCpus(podUID)
+	if err != nil {
+		logrus.Warnf("not able to retrieve assigned cpus for pod %s: %v", pod.ObjectMeta.Name, err)
+		podCPUs = cms.GetAssignedCpusFromCache(podUID)
+	}
+	logrus.Infof("assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
+	if podCPUs != "" {
+		irq.SetIRQLoadBalancing(podCPUs, true, irq.IrqSmpAffinityProcFile)
+	}
+	cms.Remove(podUID)
+}
+
+// GetClient returns a k8s clientset to the request from inside of cluster
+func getClient() kubernetes.Interface {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		logrus.Errorf("error with retrieving cluster config %v", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		logrus.Errorf("error with configuring kube client %v", err)
+	}
+
+	return clientset
 }
