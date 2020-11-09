@@ -46,8 +46,8 @@ spec:
         - name: hostirq
           mountPath:  /shared/proc/irq/
           readOnly: false
-        - name: irqdefault
-          mountPath:  /etc/default/
+        - name: irqbalanceconf
+          mountPath:  /shared/etc/sysconfig/
           readOnly: false
       volumes:
         - name: cpustate
@@ -56,6 +56,6 @@ spec:
         - name: hostirq
           hostPath:
             path: /proc/irq/
-        - name: irqdefault
+        - name: irqbalanceconf
           hostPath:
-            path: /etc/default/
+            path: /etc/sysconfig/

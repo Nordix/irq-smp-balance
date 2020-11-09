@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"unicode"
 
+	"github.com/magiconair/properties"
 	"github.com/sirupsen/logrus"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -18,7 +19,13 @@ import (
 const (
 	// IrqSmpAffinityProcFile file containing irq mask settings
 	IrqSmpAffinityProcFile = "/shared/proc/irq/default_smp_affinity"
+	// IrqBalanceConfigFile file containing irq balance banned cpus parameter
+	IrqBalanceConfigFile = "/shared/etc/sysconfig/irqbalance-peri"
+	// IrqBalanceBannedCpus key for IRQBALANCE_BANNED_CPUS parameter
+	IrqBalanceBannedCpus = "IRQBALANCE_BANNED_CPUS"
 )
+
+var mu sync.Mutex
 
 // NewOSSignalChannel creates new os signal channel
 func NewOSSignalChannel() chan os.Signal {
@@ -34,6 +41,9 @@ func NewOSSignalChannel() chan os.Signal {
 
 // SetIRQLoadBalancing enable or disable the irq loadbalance on given cpus
 func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
 	content, err := ioutil.ReadFile(irqSmpAffinityFile)
 	if err != nil {
 		return err
@@ -46,18 +56,23 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 	if err := ioutil.WriteFile(irqSmpAffinityFile, []byte(newIRQSMPSetting), 0o644); err != nil {
 		return err
 	}
-	if _, err := exec.LookPath("irqbalance"); err != nil {
-		// irqbalance is not installed, skip the rest; pod should still start, so return nil instead
-		logrus.Warnf("irqbalance binary not found: %v", err)
-		return nil
+
+	prop, err := properties.LoadFile(IrqBalanceConfigFile, properties.UTF8)
+	if err != nil {
+		return err
 	}
-	// TODO: seems this command doesn't work and can't see /etc/default/irqbalance
-	// file gets updated. may be to update the file directly.
-	// run irqbalance in daemon mode, so this won't cause delay
-	cmd := exec.Command("irqbalance", "--oneshot")
-	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
-	cmd.Env = append(os.Environ(), additionalEnv)
-	return cmd.Run()
+	prop.SetValue(IrqBalanceBannedCpus, newIRQBalanceSetting)
+	confFile, err := os.OpenFile(IrqBalanceConfigFile, os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer confFile.Close()
+	if _, err = prop.WriteComment(confFile, "#", properties.UTF8); err != nil {
+		return err
+	}
+	logrus.Infof("updated irq banned cpus %s", prop.GetString(IrqBalanceBannedCpus, ""))
+
+	return nil
 }
 
 // The folloing methods are copied from github.com/cri-o/cri-o/internal/runtimehandlerhooks
