@@ -54,6 +54,9 @@ func main() {
 			handleAddPod(obj.(*v1.Pod), cms)
 
 		},
+		// don't need to handle update event.
+		// resources (cpu) can't be edited.
+		// editing IrqLabelSelector comes as add/delete event.
 		DeleteFunc: func(obj interface{}) {
 			handleDeletePod(obj.(*v1.Pod), cms)
 		},

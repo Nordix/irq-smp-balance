@@ -53,7 +53,7 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(irqSmpAffinityFile, []byte(newIRQSMPSetting), 0o644); err != nil {
+	if err = ioutil.WriteFile(irqSmpAffinityFile, []byte(newIRQSMPSetting), 0o644); err != nil {
 		return err
 	}
 
@@ -61,7 +61,9 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 	if err != nil {
 		return err
 	}
-	prop.SetValue(IrqBalanceBannedCpus, newIRQBalanceSetting)
+	if err = prop.SetValue(IrqBalanceBannedCpus, newIRQBalanceSetting); err != nil {
+		return err
+	}
 	confFile, err := os.OpenFile(IrqBalanceConfigFile, os.O_WRONLY, 0644)
 	if err != nil {
 		return err
