@@ -1,9 +1,9 @@
 ---
-    apiVersion: v1
-    kind: ServiceAccount
-    metadata:
-      namespace: kube-system
-      name: irq-smp-balance-sa
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kube-system
+  name: irq-smp-balance-sa
 ---
 apiVersion: v1
 kind: Secret

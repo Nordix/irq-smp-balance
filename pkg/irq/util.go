@@ -20,7 +20,7 @@ const (
 	// IrqSmpAffinityProcFile file containing irq mask settings
 	IrqSmpAffinityProcFile = "/shared/proc/irq/default_smp_affinity"
 	// IrqBalanceConfigFile file containing irq balance banned cpus parameter
-	IrqBalanceConfigFile = "/shared/etc/sysconfig/irqbalance-peri"
+	IrqBalanceConfigFile = "/shared/etc/sysconfig/irqbalance"
 	// IrqBalanceBannedCpus key for IRQBALANCE_BANNED_CPUS parameter
 	IrqBalanceBannedCpus = "IRQBALANCE_BANNED_CPUS"
 )
