@@ -3,8 +3,9 @@ module github.com/pperiyasamy/irq-smp-balance
 go 1.13
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/magiconair/properties v1.8.1
+	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/gomega v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
@@ -46,4 +47,3 @@ replace (
 	k8s.io/system-validators => k8s.io/system-validators v1.2.0
 	k8s.io/utils => k8s.io/utils v0.0.0-20201027101359-01387209bb0d
 )
-
