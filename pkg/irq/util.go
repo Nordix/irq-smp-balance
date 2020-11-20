@@ -40,7 +40,7 @@ func NewOSSignalChannel() chan os.Signal {
 }
 
 // SetIRQLoadBalancing enable or disable the irq loadbalance on given cpus
-func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) error {
+func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanceConfigFile string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -57,14 +57,14 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 		return err
 	}
 
-	prop, err := properties.LoadFile(IrqBalanceConfigFile, properties.UTF8)
+	prop, err := properties.LoadFile(irqBalanceConfigFile, properties.UTF8)
 	if err != nil {
 		return err
 	}
 	if err = prop.SetValue(IrqBalanceBannedCpus, newIRQBalanceSetting); err != nil {
 		return err
 	}
-	confFile, err := os.OpenFile(IrqBalanceConfigFile, os.O_WRONLY, 0644)
+	confFile, err := os.OpenFile(irqBalanceConfigFile, os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}

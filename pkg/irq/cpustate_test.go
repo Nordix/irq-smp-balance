@@ -29,7 +29,6 @@ func TestNewCPUManagerV1(t *testing.T) {
 
 func TestNewCPUManagerV2(t *testing.T) {
 	g := NewGomegaWithT(t)
-
 	cacheV2 := make(map[string]map[string]string)
 	cacheV2["8631b3ef-066d-4723-a4b2-797d9d095c4f"] = make(map[string]string)
 	cacheV2["8631b3ef-066d-4723-a4b2-797d9d095c4f"]["busybox"] = "1-2,29"
@@ -41,5 +40,6 @@ func TestNewCPUManagerV2(t *testing.T) {
 	g.Expect(cms.GetAssignedCpusFromCache("8631b3ef-066d-4723-a4b2-797d9d095c4f")).To(Equal("1-2,29"))
 	cms.Remove("8631b3ef-066d-4723-a4b2-797d9d095c4f")
 	g.Expect(cms.GetAssignedCpusFromCache("8631b3ef-066d-4723-a4b2-797d9d095c4f")).To(Equal(""))
-	g.Expect(cms.GetAssignedCpusFromCache("9631b3ef-066d-4723-a4b2-797d9d095c50")).To(Equal("3-5,30,6-7"))
+	g.Expect(cms.GetAssignedCpusFromCache("9631b3ef-066d-4723-a4b2-797d9d095c50")).To(ContainSubstring("3-5,30"))
+	g.Expect(cms.GetAssignedCpusFromCache("9631b3ef-066d-4723-a4b2-797d9d095c50")).To(ContainSubstring("6-7"))
 }
