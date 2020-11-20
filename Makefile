@@ -5,7 +5,7 @@ image :
 	scripts/build-image.sh
 
 test :
-	go test ./cmd/... ./pkg/... -v --ginkgo.v
+	go test ./cmd/... ./pkg/...
 
 vendor :
 	go mod tidy && go mod vendor

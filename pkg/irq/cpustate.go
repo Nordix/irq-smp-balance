@@ -1,6 +1,7 @@
 package irq
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -119,5 +120,22 @@ func NewCPUManagerService() (CPUManagerService, error) {
 		checkpoint: cm,
 		EntriesV1:  make(map[string]string),
 		EntriesV2:  make(map[string]map[string]string),
+	}, nil
+}
+
+// NewCPUManagerServiceWithEntries returns new cpu manager service with pre populated cache entries
+func NewCPUManagerServiceWithEntries(v1 map[string]string, v2 map[string]map[string]string) (CPUManagerService, error) {
+	if v1 == nil && v2 == nil {
+		return nil, errors.New("v1 or v2 can not be nil")
+	}
+
+	cm, err := checkpointmanager.NewCheckpointManager(kubeletRootDir)
+	if err != nil {
+		return nil, err
+	}
+	return &cpuState{
+		checkpoint: cm,
+		EntriesV1:  v1,
+		EntriesV2:  v2,
 	}, nil
 }
