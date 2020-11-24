@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"sync"
 	"syscall"
 	"unicode"
 
-	"github.com/magiconair/properties"
 	"github.com/sirupsen/logrus"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -40,7 +40,7 @@ func NewOSSignalChannel() chan os.Signal {
 }
 
 // SetIRQLoadBalancing enable or disable the irq loadbalance on given cpus
-func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanceConfigFile string) error {
+func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -57,24 +57,11 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanc
 		return err
 	}
 
-	prop, err := properties.LoadFile(irqBalanceConfigFile, properties.UTF8)
-	if err != nil {
-		return err
-	}
-	if err = prop.SetValue(IrqBalanceBannedCpus, newIRQBalanceSetting); err != nil {
-		return err
-	}
-	confFile, err := os.OpenFile(irqBalanceConfigFile, os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer confFile.Close()
-	if _, err = prop.WriteComment(confFile, "#", properties.UTF8); err != nil {
-		return err
-	}
-	logrus.Infof("updated irq banned cpus %s", prop.GetString(IrqBalanceBannedCpus, ""))
-
-	return nil
+	logrus.Infof("updated irq banned cpus with oneshot %s", newIRQBalanceSetting)
+	cmd := exec.Command("irqbalance", "--oneshot")
+	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
+	cmd.Env = append(os.Environ(), additionalEnv)
+	return cmd.Run()
 }
 
 // The folloing methods are copied from github.com/cri-o/cri-o/internal/runtimehandlerhooks

@@ -86,7 +86,7 @@ func handleAddPod(pod *v1.Pod, cms irq.CPUManagerService) {
 	}
 	logrus.Infof("assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
 	if podCPUs != "" {
-		err = irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile, irq.IrqBalanceConfigFile)
+		err = irq.SetIRQLoadBalancing(podCPUs, false, irq.IrqSmpAffinityProcFile)
 		if err != nil {
 			logrus.Errorf("set irq load balancing for pod %s failed: %v", pod.ObjectMeta.Name, err)
 			return
@@ -108,7 +108,7 @@ func handleDeletePod(pod *v1.Pod, cms irq.CPUManagerService) {
 	}
 	logrus.Infof("assigned cpus %s for pod %s", podCPUs, pod.ObjectMeta.Name)
 	if podCPUs != "" {
-		err = irq.SetIRQLoadBalancing(podCPUs, true, irq.IrqSmpAffinityProcFile, irq.IrqBalanceConfigFile)
+		err = irq.SetIRQLoadBalancing(podCPUs, true, irq.IrqSmpAffinityProcFile)
 		if err != nil {
 			logrus.Errorf("reset irq load balancing for pod %s failed: %v", pod.ObjectMeta.Name, err)
 			return

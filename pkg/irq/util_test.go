@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/magiconair/properties"
 	. "github.com/onsi/gomega"
 )
 
@@ -13,7 +12,6 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
-	irqBalanceConfigFile := "/tmp/irqbalance"
 
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -21,15 +19,10 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	fa.Close()
 	defer os.Remove(irqSmpAffinityProcFile)
 
-	fi, err := os.OpenFile("/tmp/irqbalance", os.O_CREATE|os.O_WRONLY, 0644)
-	g.Expect(err).NotTo(HaveOccurred())
-	fi.Close()
-	defer os.Remove(irqBalanceConfigFile)
-
-	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
@@ -38,17 +31,12 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	fa.Close()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffe0"))
-
-	prop, err := properties.LoadFile(irqBalanceConfigFile, properties.UTF8)
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(prop.MustGet(IrqBalanceBannedCpus)).To(Equal("ff000000,0000001f"))
 }
 
 func TestResetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
-	irqBalanceConfigFile := "/tmp/irqbalance"
 
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -56,21 +44,16 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	fa.Close()
 	defer os.Remove(irqSmpAffinityProcFile)
 
-	fi, err := os.OpenFile("/tmp/irqbalance", os.O_CREATE|os.O_WRONLY, 0644)
-	g.Expect(err).NotTo(HaveOccurred())
-	fi.Close()
-	defer os.Remove(irqBalanceConfigFile)
-
-	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("1-2", true, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", true, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", true, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", true, irqSmpAffinityProcFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
@@ -79,8 +62,4 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	fa.Close()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffff"))
-
-	prop, err := properties.LoadFile(irqBalanceConfigFile, properties.UTF8)
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(prop.MustGet(IrqBalanceBannedCpus)).To(Equal("ff000000,00000000"))
 }

@@ -5,6 +5,7 @@ RUN apk add --update --virtual build-dependencies build-base linux-headers && \
     make
 
 FROM golang:1.13-alpine
+RUN apk add --update irqbalance
 COPY --from=builder /usr/src/irq-smp-balance/bin/smpaffinity /usr/bin/
 
 CMD ["smpaffinity"]
