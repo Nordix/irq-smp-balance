@@ -57,11 +57,17 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile string) er
 		return err
 	}
 
-	logrus.Infof("updated irq banned cpus with oneshot %s", newIRQBalanceSetting)
-	cmd := exec.Command("irqbalance", "--oneshot")
+	logrus.Infof("restart irqbalance with banned cpus %s", newIRQBalanceSetting)
+	cmd1 := exec.Command("service", "irqbalance", "restart")
 	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
-	cmd.Env = append(os.Environ(), additionalEnv)
-	return cmd.Run()
+	cmd1.Env = append(os.Environ(), additionalEnv)
+	if err = cmd1.Run(); err != nil {
+		logrus.Errorf("error restarting irqbalance service: error %v", err)
+		cmd2 := exec.Command("irqbalance", "--oneshot")
+		cmd2.Env = cmd1.Env
+		return cmd2.Run()
+	}
+	return nil
 }
 
 // The folloing methods are copied from github.com/cri-o/cri-o/internal/runtimehandlerhooks
