@@ -3,6 +3,7 @@ module github.com/pperiyasamy/irq-smp-balance
 go 1.13
 
 require (
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/magiconair/properties v1.8.1
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.7.0

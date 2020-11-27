@@ -4,14 +4,7 @@ RUN apk add --update --virtual build-dependencies build-base linux-headers && \
     cd /usr/src/irq-smp-balance && \
     make
 
-FROM ubuntu:latest
-
-RUN apt-get update &&\
- apt-get install -y sudo \
- irqbalance \
- systemd
-
+FROM golang:1.13-alpine
 COPY --from=builder /usr/src/irq-smp-balance/bin/smpaffinity /usr/bin/
 
 CMD ["smpaffinity"]
-

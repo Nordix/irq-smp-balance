@@ -29,9 +29,6 @@ $ cat ./deployments/auth.yaml | kubectl apply -f -
 $ cat ./deployments/irqsmpbalance-daemonset.yaml | kubectl apply -f -
 ```
 
-## Note
+### irqsmpdaemon
 
-The irqsmpbalance-daemonset.yml considers `irqbalance` config file present at `/etc/sysconfig/`
-directory. This may not be a case with Ubuntu as this file would present at `/etc/default/` directory.
-Hence `hostPath` in `irqbalanceconf` have to be updated accoringly before the deployment.
-
+TODO

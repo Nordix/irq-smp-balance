@@ -41,10 +41,13 @@ spec:
           privileged: true
         volumeMounts:
         - name: cpustate
-          mountPath: /shared/var/lib/kubelet/
+          mountPath: /host/var/lib/kubelet/
           readOnly: true
         - name: hostirq
-          mountPath:  /shared/proc/irq/
+          mountPath:  /host/proc/irq/
+          readOnly: false
+        - name: irqbalanceconf
+          mountPath:  /host/etc/sysconfig/
           readOnly: false
       volumes:
         - name: cpustate
@@ -53,3 +56,6 @@ spec:
         - name: hostirq
           hostPath:
             path: /proc/irq/
+        - name: irqbalanceconf
+          hostPath:
+            path: /etc/sysconfig/
