@@ -26,10 +26,20 @@ spec:
         operator: Exists
         effect: NoSchedule
       serviceAccountName: irq-smp-balance-sa
+      initContainers:
+      - name: irq-daemon-init
+        image: smp-affinity
+        command: ['cp', '/irqsmpdaemon', '/host/usr/bin/irqsmpdaemon']
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: smpbin
+          mountPath: /host/usr/bin
       containers:
       - name: kube-smpaffinity
         image: smp-affinity
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         command:
           - smpaffinity
         env:
@@ -45,10 +55,8 @@ spec:
           readOnly: true
         - name: hostirq
           mountPath:  /host/proc/irq/
-          readOnly: false
         - name: irqbalanceconf
           mountPath:  /host/etc/sysconfig/
-          readOnly: false
       volumes:
         - name: cpustate
           hostPath:
@@ -59,3 +67,6 @@ spec:
         - name: irqbalanceconf
           hostPath:
             path: /etc/sysconfig/
+        - name: smpbin
+          hostPath:
+            path: /usr/bin/

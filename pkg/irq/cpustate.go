@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	kubeletRootDir          string = "/shared/var/lib/kubelet/"
+	kubeletRootDir          string = "/host/var/lib/kubelet/"
 	cpuManagerStateFileName string = "cpu_manager_state"
 )
 

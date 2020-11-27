@@ -6,5 +6,6 @@ RUN apk add --update --virtual build-dependencies build-base linux-headers && \
 
 FROM golang:1.13-alpine
 COPY --from=builder /usr/src/irq-smp-balance/bin/smpaffinity /usr/bin/
+COPY --from=builder /usr/src/irq-smp-balance/bin/irqsmpdaemon /irqsmpdaemon
 
 CMD ["smpaffinity"]
