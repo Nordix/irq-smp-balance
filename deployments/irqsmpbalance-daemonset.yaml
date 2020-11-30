@@ -31,8 +31,6 @@ spec:
         image: smp-affinity
         command: ['cp', '/irqsmpdaemon', '/host/usr/bin/irqsmpdaemon']
         imagePullPolicy: IfNotPresent
-        securityContext:
-          privileged: true
         volumeMounts:
         - name: smpbin
           mountPath: /host/usr/bin
@@ -47,8 +45,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-        securityContext:
-          privileged: true
         volumeMounts:
         - name: cpustate
           mountPath: /host/var/lib/kubelet/

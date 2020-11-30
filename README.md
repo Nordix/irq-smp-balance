@@ -17,18 +17,34 @@ $ make image
 
 ### Deployment
 
-This is a daemonset running in all the worker nodes watching for Guaranteed QoS class pods
-having labels with `irq-load-balancing.docker.io=true` and exclude assigned pod CPUs from IRQ
-balancing.
+This requires a daemon and daemonset pod running in worker nodes watching for Guaranteed QoS class pods
+having labels with `irq-load-balancing.docker.io=true` and exclude assigned pod CPUs from IRQ balancing.
 
-We'll apply a daemonset which installs irq-smp-balance using `kubectl` from this repo.
-From the root directory of the clone, apply the daemonset YAML file:
+The daemon and daemonset pod share a config file, by default both chooses `/etc/sysconfig/podirqbalance` file.
+If another config file chosen, the hostPath `irqbalanceconf` in `./deployments/irqsmpbalance-daemonset.yaml`
+has to be updated accordingly before the deployment.
+
+It's time to deploy the daemonset on the cluster,  We'll apply a daemonset which installs irq-smp-balance
+using `kubectl` from this repo. From the root directory of the clone, apply the daemonset YAML file:
 
 ```
 $ cat ./deployments/auth.yaml | kubectl apply -f -
 $ cat ./deployments/irqsmpbalance-daemonset.yaml | kubectl apply -f -
 ```
 
-### irqsmpdaemon
+Now run the daemon on the worker node:
 
-TODO
+```
+$ irqsmpdaemon &
+```
+
+The irqsmpdaemon can also be run with different config and log files, Refer the help:
+
+```
+$ irqsmpdaemon -h
+Usage of irqsmpdaemon:
+  -config string
+        irq balance config file (default "/etc/sysconfig/podirqbalance")
+  -log string
+        log file (default "/var/log/irqsmpdaemon.log")
+```
