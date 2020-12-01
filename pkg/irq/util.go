@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"unicode"
@@ -17,7 +18,7 @@ const (
 	// IrqSmpAffinityProcFile file containing irq mask settings
 	IrqSmpAffinityProcFile = "/host/proc/irq/default_smp_affinity"
 	// IrqBalanceConfigFile file containing irq balance banned cpus parameter
-	IrqBalanceConfigFile = "/host/etc/sysconfig/podirqbalance"
+	IrqBalanceConfigFile = "/host/etc/sysconfig/pod_irq_banned_cpus"
 	// IrqBalanceBannedCpus key for IRQBALANCE_BANNED_CPUS parameter
 	IrqBalanceBannedCpus = "IRQBALANCE_BANNED_CPUS"
 )
@@ -54,6 +55,25 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanc
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// ResetIRQBalance restart irqbalance daemon with newIRQBalanceSetting
+func ResetIRQBalance(newIRQBalanceSetting string) error {
+	logrus.Infof("restart irqbalance with banned cpus %s", newIRQBalanceSetting)
+
+	cmd1 := exec.Command("service", "irqbalance", "restart")
+	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
+	cmd1.Env = append(os.Environ(), additionalEnv)
+
+	if err := cmd1.Run(); err != nil {
+		logrus.Errorf("error restarting irqbalance service: error %v", err)
+		cmd2 := exec.Command("irqbalance", "--oneshot")
+		cmd2.Env = cmd1.Env
+		return cmd2.Run()
+	}
+	logrus.Infof("irqbalance service is restarted")
 
 	return nil
 }

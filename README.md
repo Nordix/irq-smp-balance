@@ -20,7 +20,7 @@ $ make image
 This requires a daemon and daemonset pod running in worker nodes watching for Guaranteed QoS class pods
 having labels with `irq-load-balancing.docker.io=true` and exclude assigned pod CPUs from IRQ balancing.
 
-The daemon and daemonset pod share a config file, by default both chooses `/etc/sysconfig/podirqbalance` file.
+The daemon and daemonset pod share a config file, by default both chooses `/etc/sysconfig/pod_irq_banned_cpus` file.
 If another config file chosen, the hostPath `irqbalanceconf` in `./deployments/irqsmpbalance-daemonset.yaml`
 has to be updated accordingly before the deployment.
 
@@ -35,7 +35,7 @@ $ cat ./deployments/irqsmpbalance-daemonset.yaml | kubectl apply -f -
 Now run the daemon on the worker node:
 
 ```
-$ irqsmpdaemon &
+$ nohup irqsmpdaemon </dev/null >irqsmp.out 2>irqsmp.err &
 ```
 
 The irqsmpdaemon can also be run with different config and log files, Refer the help:
@@ -44,7 +44,7 @@ The irqsmpdaemon can also be run with different config and log files, Refer the 
 $ irqsmpdaemon -h
 Usage of irqsmpdaemon:
   -config string
-        irq balance config file (default "/etc/sysconfig/podirqbalance")
+        pod irq banned cpus file (default "/etc/sysconfig/pod_irq_banned_cpus")
   -log string
         log file (default "/var/log/irqsmpdaemon.log")
 ```
@@ -93,8 +93,8 @@ kube-smp-affinity-amd64-pqwq9                1/1     Running   0          47s
 # Look for daemon set pod logs
 $ kubectl logs kube-smp-affinity-amd64-pqwq9 -n kube-system --follow
 
-# Start the daemon on the host
-$ irqsmpdaemon &
+# Start irqsmpdaemon as a background process on the host
+$ nohup irqsmpdaemon </dev/null >irqsmp.out 2>irqsmp.err &
 
 # Look for the daemon logs
 $ tail -f /var/log/irqsmpdaemon.log

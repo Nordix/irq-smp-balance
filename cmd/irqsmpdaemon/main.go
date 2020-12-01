@@ -4,24 +4,23 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pperiyasamy/irq-smp-balance/pkg/irq"
 	"github.com/sirupsen/logrus"
 )
 
-// IrqBalanceConfigFile file containing irq balance banned cpus parameter
 const (
-	defaultIrqBalanceConfigFile = "/etc/sysconfig/podirqbalance"
+	defaultIrqBalanceConfigFile = "/etc/sysconfig/pod_irq_banned_cpus"
 	defaultLogFile              = "/var/log/irqsmpdaemon.log"
 )
 
 func main() {
 
-	irqBalanceConfigFile := flag.String("config", defaultIrqBalanceConfigFile, "irq balance config file")
+	irqBalanceConfigFile := flag.String("config", defaultIrqBalanceConfigFile, "pod irq banned cpus file")
 	logFile := flag.String("log", defaultLogFile, "log file")
 	flag.Parse()
 
@@ -54,7 +53,7 @@ func main() {
 						logrus.Infof("error reading %s file : %v", *irqBalanceConfigFile, err)
 						return
 					}
-					if err = resetIRQBalance(strings.TrimSpace(string(content))); err != nil {
+					if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {
 						logrus.Infof("irqbalance with banned cpus failed: %v", err)
 					}
 
@@ -87,24 +86,6 @@ func main() {
 	logrus.Infof("irq smp daemon is stopped")
 }
 
-func resetIRQBalance(newIRQBalanceSetting string) error {
-	logrus.Infof("restart irqbalance with banned cpus %s", newIRQBalanceSetting)
-
-	cmd1 := exec.Command("service", "irqbalance", "restart")
-	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
-	cmd1.Env = append(os.Environ(), additionalEnv)
-
-	if err := cmd1.Run(); err != nil {
-		logrus.Errorf("error restarting irqbalance service: error %v", err)
-		cmd2 := exec.Command("irqbalance", "--oneshot")
-		cmd2.Env = cmd1.Env
-		return cmd2.Run()
-	}
-	logrus.Infof("irqbalance service is restarted")
-
-	return nil
-}
-
 func initializeLog(logFile string) error {
 	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
@@ -123,6 +104,15 @@ func initializeConfigFile(configFile string) error {
 		}
 		irqBalanceConfig.Close()
 		return nil
+	} else if err == nil {
+		content, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			logrus.Infof("error reading %s file : %v", configFile, err)
+			return err
+		}
+		if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {
+			logrus.Infof("irqbalance with banned cpus failed: %v", err)
+		}
 	}
 	return err
 }
