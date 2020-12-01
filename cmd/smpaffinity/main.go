@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/pperiyasamy/irq-smp-balance/pkg/irq"
 	"github.com/sirupsen/logrus"
@@ -23,7 +25,9 @@ const (
 
 func main() {
 
-	c := irq.NewOSSignalChannel()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	done := make(chan bool, 1)
 
 	worker, ok := os.LookupEnv(WorkerNodeName)
 	if !ok {
@@ -64,8 +68,13 @@ func main() {
 
 	informer.Run(stopper)
 
+	go func() {
+		sig := <-sigs
+		logrus.Infof("received the signal %v", sig)
+		done <- true
+	}()
 	// Capture signals to cleanup before exiting
-	<-c
+	<-done
 
 	close(stopper)
 

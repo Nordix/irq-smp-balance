@@ -48,3 +48,54 @@ Usage of irqsmpdaemon:
   -log string
         log file (default "/var/log/irqsmpdaemon.log")
 ```
+
+## Cleanup
+
+build clean up:
+
+```
+$ make clean
+```
+
+Undeploy the daemonset:
+
+```
+$ cat ./deployments/irqsmpbalance-daemonset.yaml | kubectl delete -f -
+$ cat ./deployments/auth.yaml | kubectl delete -f -
+```
+
+Shutting down the daemon:
+
+```
+$ pkill irqsmpdaemon
+```
+
+## Debug & Troubleshooting
+
+Refer to the following logs for more information.
+
+```
+# Create service account, cluster role and cluster role binding
+$ kubectl create -f deployments/auth.yaml
+serviceaccount/irq-smp-balance-sa created
+secret/irq-smp-balance-sa-secret created
+clusterrole.rbac.authorization.k8s.io/irq-smp-balance created
+clusterrolebinding.rbac.authorization.k8s.io/irq-smp-balance-role-binding created
+
+# Create smp affinity daemonset
+$ kubectl create -f deployments/irqsmpbalance-daemonset.yaml
+daemonset.apps/kube-smp-affinity-amd64 created
+
+$ kubectl -n kube-system get pods
+NAME                                         READY   STATUS    RESTARTS   AGE
+kube-smp-affinity-amd64-pqwq9                1/1     Running   0          47s
+
+# Look for daemon set pod logs
+$ kubectl logs kube-smp-affinity-amd64-pqwq9 -n kube-system --follow
+
+# Start the daemon on the host
+$ irqsmpdaemon &
+
+# Look for the daemon logs
+$ tail -f /var/log/irqsmpdaemon.log
+```

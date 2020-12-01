@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"unicode"
 
 	"github.com/sirupsen/logrus"
@@ -25,18 +23,6 @@ const (
 )
 
 var mu sync.Mutex
-
-// NewOSSignalChannel creates new os signal channel
-func NewOSSignalChannel() chan os.Signal {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c,
-		os.Interrupt,
-		// More Linux signals here
-		syscall.SIGHUP,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-	return c
-}
 
 // SetIRQLoadBalancing enable or disable the irq loadbalance on given cpus
 func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanceConfigFile string) error {

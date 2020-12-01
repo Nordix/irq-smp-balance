@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/pperiyasamy/irq-smp-balance/pkg/irq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,7 +25,9 @@ func main() {
 	logFile := flag.String("log", defaultLogFile, "log file")
 	flag.Parse()
 
-	c := irq.NewOSSignalChannel()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	done := make(chan bool, 1)
 
 	if err := initializeLog(*logFile); err != nil {
 		panic(err)
@@ -38,7 +41,6 @@ func main() {
 
 	logrus.Infof("using config file %s", *irqBalanceConfigFile)
 
-	done := make(chan bool)
 	go func() {
 		for {
 			select {
@@ -73,9 +75,15 @@ func main() {
 		logrus.Fatal(err)
 	}
 
+	go func() {
+		sig := <-sigs
+		logrus.Infof("received the signal %v", sig)
+		done <- true
+	}()
+
 	// Capture signals to cleanup before exiting
-	<-c
 	<-done
+
 	logrus.Infof("irq smp daemon is stopped")
 }
 
