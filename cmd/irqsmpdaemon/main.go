@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	defaultIrqBalanceConfigFile = "/etc/sysconfig/pod_irq_banned_cpus"
+	defaultPodIrqBannedCPUsFile = "/etc/sysconfig/pod_irq_banned_cpus"
 	defaultLogFile              = "/var/log/irqsmpdaemon.log"
 )
 
 func main() {
 
-	irqBalanceConfigFile := flag.String("config", defaultIrqBalanceConfigFile, "pod irq banned cpus file")
+	podIrqBannedCPUsFile := flag.String("config", defaultPodIrqBannedCPUsFile, "pod irq banned cpus file")
 	logFile := flag.String("log", defaultLogFile, "log file")
 	flag.Parse()
 
@@ -38,7 +38,7 @@ func main() {
 	}
 	defer watcher.Close()
 
-	logrus.Infof("using config file %s", *irqBalanceConfigFile)
+	logrus.Infof("using config file %s", *podIrqBannedCPUsFile)
 
 	go func() {
 		for {
@@ -48,9 +48,9 @@ func main() {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					content, err := ioutil.ReadFile(*irqBalanceConfigFile)
+					content, err := ioutil.ReadFile(*podIrqBannedCPUsFile)
 					if err != nil {
-						logrus.Infof("error reading %s file : %v", *irqBalanceConfigFile, err)
+						logrus.Infof("error reading %s file : %v", *podIrqBannedCPUsFile, err)
 						return
 					}
 					if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {
@@ -67,10 +67,10 @@ func main() {
 		}
 	}()
 
-	if err = initializeConfigFile(*irqBalanceConfigFile); err != nil {
+	if err = initializeConfigFile(*podIrqBannedCPUsFile); err != nil {
 		logrus.Fatal(err)
 	}
-	if err = watcher.Add(*irqBalanceConfigFile); err != nil {
+	if err = watcher.Add(*podIrqBannedCPUsFile); err != nil {
 		logrus.Fatal(err)
 	}
 
@@ -95,19 +95,19 @@ func initializeLog(logFile string) error {
 	return nil
 }
 
-func initializeConfigFile(configFile string) error {
-	_, err := os.Stat(configFile)
+func initializeConfigFile(podIrqBannedCPUsFile string) error {
+	_, err := os.Stat(podIrqBannedCPUsFile)
 	if os.IsNotExist(err) {
-		irqBalanceConfig, err := os.Create(configFile)
+		irqBalanceConfig, err := os.Create(podIrqBannedCPUsFile)
 		if err != nil {
 			return err
 		}
 		irqBalanceConfig.Close()
 		return nil
 	} else if err == nil {
-		content, err := ioutil.ReadFile(configFile)
+		content, err := ioutil.ReadFile(podIrqBannedCPUsFile)
 		if err != nil {
-			logrus.Infof("error reading %s file : %v", configFile, err)
+			logrus.Infof("error reading %s file : %v", podIrqBannedCPUsFile, err)
 			return err
 		}
 		if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {

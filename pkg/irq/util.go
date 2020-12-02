@@ -17,8 +17,10 @@ import (
 const (
 	// IrqSmpAffinityProcFile file containing irq mask settings
 	IrqSmpAffinityProcFile = "/host/proc/irq/default_smp_affinity"
+	// PodIrqBannedCPUsFile file containing irq balance banned cpus parameter
+	PodIrqBannedCPUsFile = "/host/etc/sysconfig/pod_irq_banned_cpus"
 	// IrqBalanceConfigFile file containing irq balance banned cpus parameter
-	IrqBalanceConfigFile = "/host/etc/sysconfig/pod_irq_banned_cpus"
+	IrqBalanceConfigFile = "/host/etc/sysconfig/irqbalance"
 	// IrqBalanceBannedCpus key for IRQBALANCE_BANNED_CPUS parameter
 	IrqBalanceBannedCpus = "IRQBALANCE_BANNED_CPUS"
 )
@@ -26,7 +28,7 @@ const (
 var mu sync.Mutex
 
 // SetIRQLoadBalancing enable or disable the irq loadbalance on given cpus
-func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanceConfigFile string) error {
+func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, podIrqBannedCPUsFile, irqBalanceConfigFile string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -45,17 +47,46 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, irqBalanc
 
 	logrus.Infof("irqbalance banned cpus %s", newIRQBalanceSetting)
 
-	irqBalanceConfig, err := os.Create(irqBalanceConfigFile)
-	if err != nil {
-		return err
-	}
-	defer irqBalanceConfig.Close()
-
-	_, err = irqBalanceConfig.WriteString(newIRQBalanceSetting)
-	if err != nil {
+	if err = updateIrqBalanceConfigFile(irqBalanceConfigFile, newIRQBalanceSetting); err != nil {
 		return err
 	}
 
+	// write to pod cpu banned file at last so that fnotify write event triggered at right time.
+	podIrqBannedCPUsConfig, err := os.Create(podIrqBannedCPUsFile)
+	if err != nil {
+		return err
+	}
+	defer podIrqBannedCPUsConfig.Close()
+
+	_, err = podIrqBannedCPUsConfig.WriteString(newIRQBalanceSetting)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateIrqBalanceConfigFile(irqBalanceConfigFile, newIRQBalanceSetting string) error {
+	input, err := ioutil.ReadFile(irqBalanceConfigFile)
+	if err != nil {
+		logrus.Infof("irqbalance config file %s doesn't exist", irqBalanceConfigFile)
+		return nil
+	}
+	lines := strings.Split(string(input), "\n")
+	found := false
+	for i, line := range lines {
+		if strings.Contains(line, IrqBalanceBannedCpus+"=") {
+			lines[i] = IrqBalanceBannedCpus + "=" + "\"" + newIRQBalanceSetting + "\""
+			found = true
+		}
+	}
+	output := strings.Join(lines, "\n")
+	if !found {
+		output = output + "\n" + IrqBalanceBannedCpus + "=" + "\"" + newIRQBalanceSetting + "\"" + "\n"
+	}
+	if err = ioutil.WriteFile(irqBalanceConfigFile, []byte(output), 0644); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -64,13 +95,11 @@ func ResetIRQBalance(newIRQBalanceSetting string) error {
 	logrus.Infof("restart irqbalance with banned cpus %s", newIRQBalanceSetting)
 
 	cmd1 := exec.Command("service", "irqbalance", "restart")
-	additionalEnv := "IRQBALANCE_BANNED_CPUS=" + newIRQBalanceSetting
-	cmd1.Env = append(os.Environ(), additionalEnv)
-
 	if err := cmd1.Run(); err != nil {
 		logrus.Errorf("error restarting irqbalance service: error %v", err)
 		cmd2 := exec.Command("irqbalance", "--oneshot")
-		cmd2.Env = cmd1.Env
+		additionalEnv := IrqBalanceBannedCpus + "=" + newIRQBalanceSetting
+		cmd2.Env = append(os.Environ(), additionalEnv)
 		return cmd2.Run()
 	}
 	logrus.Infof("irqbalance service is restarted")

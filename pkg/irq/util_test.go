@@ -12,6 +12,7 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
+	podIrqBannedCPUsFile := "/tmp/pod_irq_banned_cpus"
 	irqBalanceConfigFile := "/tmp/irqbalance"
 
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -25,10 +26,10 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	fi.Close()
 	defer os.Remove(irqBalanceConfigFile)
 
-	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
@@ -38,7 +39,7 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffe0"))
 
-	fb, err := os.OpenFile(irqBalanceConfigFile, os.O_RDONLY, 0644)
+	fb, err := os.OpenFile(podIrqBannedCPUsFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err = ioutil.ReadAll(fb)
 	fb.Close()
@@ -50,6 +51,7 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
+	podIrqBannedCPUsFile := "/tmp/pod_irq_banned_cpus"
 	irqBalanceConfigFile := "/tmp/irqbalance"
 
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -63,16 +65,16 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	fi.Close()
 	defer os.Remove(irqBalanceConfigFile)
 
-	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("1-2", true, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("1-2", true, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	err = SetIRQLoadBalancing("0,3-4", true, irqSmpAffinityProcFile, irqBalanceConfigFile)
+	err = SetIRQLoadBalancing("0,3-4", true, irqSmpAffinityProcFile, podIrqBannedCPUsFile, irqBalanceConfigFile)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
@@ -82,7 +84,7 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffff"))
 
-	fb, err := os.OpenFile(irqBalanceConfigFile, os.O_RDONLY, 0644)
+	fb, err := os.OpenFile(podIrqBannedCPUsFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err = ioutil.ReadAll(fb)
 	fb.Close()
