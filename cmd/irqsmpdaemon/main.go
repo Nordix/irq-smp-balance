@@ -15,12 +15,14 @@ import (
 
 const (
 	defaultPodIrqBannedCPUsFile = "/etc/sysconfig/pod_irq_banned_cpus"
+	defaultIrqBalanceConfigFile = "/etc/sysconfig/irqbalance"
 	defaultLogFile              = "/var/log/irqsmpdaemon.log"
 )
 
 func main() {
 
-	podIrqBannedCPUsFile := flag.String("config", defaultPodIrqBannedCPUsFile, "pod irq banned cpus file")
+	podIrqBannedCPUsFile := flag.String("podfile", defaultPodIrqBannedCPUsFile, "pod irq banned cpus file")
+	irqBalanceConfigFile := flag.String("config", defaultIrqBalanceConfigFile, "irq balance config file")
 	logFile := flag.String("log", defaultLogFile, "log file")
 	flag.Parse()
 
@@ -53,7 +55,7 @@ func main() {
 						logrus.Infof("error reading %s file : %v", *podIrqBannedCPUsFile, err)
 						return
 					}
-					if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {
+					if err = irq.ResetIRQBalance(*irqBalanceConfigFile, strings.TrimSpace(string(content))); err != nil {
 						logrus.Infof("irqbalance with banned cpus failed: %v", err)
 					}
 
@@ -67,7 +69,7 @@ func main() {
 		}
 	}()
 
-	if err = initializeConfigFile(*podIrqBannedCPUsFile); err != nil {
+	if err = initializeConfigFile(*podIrqBannedCPUsFile, *irqBalanceConfigFile); err != nil {
 		logrus.Fatal(err)
 	}
 	if err = watcher.Add(*podIrqBannedCPUsFile); err != nil {
@@ -95,7 +97,7 @@ func initializeLog(logFile string) error {
 	return nil
 }
 
-func initializeConfigFile(podIrqBannedCPUsFile string) error {
+func initializeConfigFile(podIrqBannedCPUsFile, irqBalanceConfigFile string) error {
 	_, err := os.Stat(podIrqBannedCPUsFile)
 	if os.IsNotExist(err) {
 		irqBalanceConfig, err := os.Create(podIrqBannedCPUsFile)
@@ -110,7 +112,7 @@ func initializeConfigFile(podIrqBannedCPUsFile string) error {
 			logrus.Infof("error reading %s file : %v", podIrqBannedCPUsFile, err)
 			return err
 		}
-		if err = irq.ResetIRQBalance(strings.TrimSpace(string(content))); err != nil {
+		if err = irq.ResetIRQBalance(irqBalanceConfigFile, strings.TrimSpace(string(content))); err != nil {
 			logrus.Infof("irqbalance with banned cpus failed: %v", err)
 		}
 	}

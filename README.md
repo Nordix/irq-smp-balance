@@ -44,9 +44,11 @@ The irqsmpdaemon can also be run with different config and log files, Refer the 
 $ irqsmpdaemon -h
 Usage of irqsmpdaemon:
   -config string
-        pod irq banned cpus file (default "/etc/sysconfig/pod_irq_banned_cpus")
+        irq balance config file (default "/etc/sysconfig/irqbalance")
   -log string
         log file (default "/var/log/irqsmpdaemon.log")
+  -podfile string
+        pod irq banned cpus file (default "/etc/sysconfig/pod_irq_banned_cpus")
 ```
 
 ## Cleanup
