@@ -16,6 +16,7 @@ import (
 const (
 	defaultPodIrqBannedCPUsFile = "/etc/sysconfig/pod_irq_banned_cpus"
 	defaultIrqBalanceConfigFile = "/etc/sysconfig/irqbalance"
+	irqSmpAffinityFile          = "/proc/irq/default_smp_affinity"
 	defaultLogFile              = "/var/log/irqsmpdaemon.log"
 )
 
@@ -27,7 +28,8 @@ func main() {
 	flag.Parse()
 
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM,
+		syscall.SIGQUIT)
 	done := make(chan bool, 1)
 
 	if err := initializeLog(*logFile); err != nil {
@@ -107,12 +109,20 @@ func initializeConfigFile(podIrqBannedCPUsFile, irqBalanceConfigFile string) err
 		irqBalanceConfig.Close()
 		return nil
 	} else if err == nil {
-		content, err := ioutil.ReadFile(podIrqBannedCPUsFile)
-		if err != nil {
-			logrus.Infof("error reading %s file : %v", podIrqBannedCPUsFile, err)
+		// Always derive the banned cpu mask from irqSmpAffinityFile
+		// this would fix the recovery of irqbalance config after
+		// compute reboot
+		var bannedCPUMask string
+		if cpuMask, err := irq.RetrieveCPUMask(irqSmpAffinityFile); err == nil {
+			if bannedCPUMask, err = irq.InvertMaskStringWithComma(cpuMask); err != nil {
+				logrus.Infof("error retrieving banned mask: %v", err)
+				return err
+			}
+		} else {
+			logrus.Infof("error retrieving cpu mask: %v", err)
 			return err
 		}
-		if err = irq.ResetIRQBalance(irqBalanceConfigFile, strings.TrimSpace(string(content))); err != nil {
+		if err = irq.ResetIRQBalance(irqBalanceConfigFile, bannedCPUMask); err != nil {
 			logrus.Infof("irqbalance with banned cpus failed: %v", err)
 		}
 	}

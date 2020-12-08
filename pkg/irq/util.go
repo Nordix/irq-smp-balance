@@ -30,11 +30,11 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, podIrqBan
 	mu.Lock()
 	defer mu.Unlock()
 
-	content, err := ioutil.ReadFile(irqSmpAffinityFile)
+	currentIRQSMPSetting, err := RetrieveCPUMask(irqSmpAffinityFile)
 	if err != nil {
 		return err
 	}
-	currentIRQSMPSetting := strings.TrimSpace(string(content))
+
 	newIRQSMPSetting, newIRQBalanceSetting, err := UpdateIRQSmpAffinityMask(cpus, currentIRQSMPSetting, enable)
 	if err != nil {
 		return err
@@ -101,6 +101,37 @@ func ResetIRQBalance(irqBalanceConfigFile, newIRQBalanceSetting string) error {
 	logrus.Infof("irqbalance service is restarted")
 
 	return nil
+}
+
+// InvertMaskStringWithComma invert the give mask string retaining the comma
+func InvertMaskStringWithComma(maskStringWithComma string) (string, error) {
+	// only ascii string supported
+	if !isASCII(maskStringWithComma) {
+		return "", fmt.Errorf("non ascii character detected: %s", maskStringWithComma)
+	}
+
+	s := strings.ReplaceAll(maskStringWithComma, ",", "")
+	currentMaskArray, err := mapHexCharToByte(s)
+	if err != nil {
+		return "", err
+	}
+
+	invertedMaskString := mapByteToHexChar(invertByteArray(currentMaskArray))
+	invertedMaskStringWithComma := invertedMaskString[0:8]
+	for i := 8; i+8 <= len(invertedMaskString); i += 8 {
+		invertedMaskStringWithComma = invertedMaskStringWithComma + "," + invertedMaskString[i:i+8]
+	}
+
+	return invertedMaskStringWithComma, nil
+}
+
+// RetrieveCPUMask retrieves cpu masks set in irq smp affinity file
+func RetrieveCPUMask(irqSmpAffinityFile string) (string, error) {
+	content, err := ioutil.ReadFile(irqSmpAffinityFile)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(content)), nil
 }
 
 // The folloing methods are copied from github.com/cri-o/cri-o/internal/runtimehandlerhooks
