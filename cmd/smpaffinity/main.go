@@ -83,7 +83,7 @@ func main() {
 		},
 	})
 
-	informer.Run(stopper)
+	go informer.Run(stopper)
 
 	go func() {
 		sig := <-sigs
