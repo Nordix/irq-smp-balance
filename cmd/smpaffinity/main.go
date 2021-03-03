@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/pperiyasamy/irq-smp-balance/pkg/irq"
@@ -68,18 +69,23 @@ func main() {
 		o.FieldSelector = fmt.Sprintf("spec.nodeName=%s,status.phase=Running", worker)
 	})
 	informer := factory.Core().V1().Pods().Informer()
+	mutex := &sync.Mutex{}
 	stopper := make(chan struct{})
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			mutex.Lock()
 			handleAddPod(obj.(*v1.Pod), cms)
+			mutex.Unlock()
 
 		},
 		// don't need to handle update event.
 		// resources (cpu) can't be edited.
 		// editing IrqLabelSelector comes as add/delete event.
 		DeleteFunc: func(obj interface{}) {
+			mutex.Lock()
 			handleDeletePod(obj.(*v1.Pod), cms)
+			mutex.Unlock()
 		},
 	})
 
