@@ -4,8 +4,6 @@ go 1.13
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/magiconair/properties v1.8.1
-	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	k8s.io/api v0.0.0

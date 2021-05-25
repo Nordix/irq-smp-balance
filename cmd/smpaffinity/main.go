@@ -1,4 +1,4 @@
-// Copyright 2020 Ericsson Software Technology.
+// Copyright (c) 2020-2021 Nordix Foundation.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
