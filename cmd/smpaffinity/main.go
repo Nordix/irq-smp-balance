@@ -21,7 +21,9 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/pperiyasamy/irq-smp-balance/pkg/irq"
 	"github.com/sirupsen/logrus"
@@ -89,7 +91,15 @@ func main() {
 		},
 	})
 
-	go informer.Run(stopper)
+	var isRunning int32
+	go func() {
+		atomic.StoreInt32(&(isRunning), int32(1))
+		// informer Run blocks until informer is stopped
+		logrus.Infof("starting irq labeled pod informer")
+		informer.Run(stopper)
+		logrus.Infof("irq labeled pod informer is stopped")
+		atomic.StoreInt32(&(isRunning), int32(0))
+	}()
 
 	go func() {
 		sig := <-sigs
@@ -100,6 +110,14 @@ func main() {
 	<-done
 
 	close(stopper)
+	tEnd := time.Now().Add(3 * time.Second)
+	for tEnd.After(time.Now()) {
+		if atomic.LoadInt32(&isRunning) == 0 {
+			logrus.Infof("irq labeled pod informer is no longer running, proceed to force shutdown")
+			break
+		}
+		time.Sleep(600 * time.Millisecond)
+	}
 
 	logrus.Infof("irq-smp-balance is stopped")
 }
