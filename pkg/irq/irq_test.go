@@ -24,22 +24,33 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	irqSmpAffinityProcFile = "/tmp/default_smp_affinity"
+	podIrqBannedCPUsFile   = "/tmp/pod_irq_banned_cpus"
+)
+
 func TestSetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
-	podIrqBannedCPUsFile := "/tmp/pod_irq_banned_cpus"
-
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
-	fa.Write([]byte("00ffffff,ffffffff"))
-	fa.Close()
-	defer os.Remove(irqSmpAffinityProcFile)
+	_, err = fa.Write([]byte("00ffffff,ffffffff"))
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(fa.Close()).NotTo(HaveOccurred())
+	defer func() {
+		if err := os.Remove(irqSmpAffinityProcFile); err != nil {
+			t.Errorf("error closing the file %s: %v", irqSmpAffinityProcFile, err)
+		}
+	}()
 
 	fi, err := os.OpenFile(podIrqBannedCPUsFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
-	fi.Close()
-	defer os.Remove(podIrqBannedCPUsFile)
+	g.Expect(fi.Close()).NotTo(HaveOccurred())
+	defer func() {
+		if err := os.Remove(podIrqBannedCPUsFile); err != nil {
+			t.Errorf("error closing the file %s: %v", podIrqBannedCPUsFile, err)
+		}
+	}()
 
 	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -50,14 +61,14 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err := ioutil.ReadAll(fa)
-	fa.Close()
+	g.Expect(fa.Close()).NotTo(HaveOccurred())
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffe0"))
 
 	fb, err := os.OpenFile(podIrqBannedCPUsFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err = ioutil.ReadAll(fb)
-	fb.Close()
+	g.Expect(fb.Close()).NotTo(HaveOccurred())
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("ff000000,0000001f"))
 }
@@ -65,19 +76,25 @@ func TestSetIRQLoadBalancing(t *testing.T) {
 func TestResetIRQLoadBalancing(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	irqSmpAffinityProcFile := "/tmp/default_smp_affinity"
-	podIrqBannedCPUsFile := "/tmp/pod_irq_banned_cpus"
-
 	fa, err := os.OpenFile(irqSmpAffinityProcFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
-	fa.Write([]byte("00ffffff,ffffffff"))
-	fa.Close()
-	defer os.Remove(irqSmpAffinityProcFile)
+	_, err = fa.Write([]byte("00ffffff,ffffffff"))
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(fa.Close()).NotTo(HaveOccurred())
+	defer func() {
+		if err := os.Remove(irqSmpAffinityProcFile); err != nil {
+			t.Errorf("error closing the file %s: %v", irqSmpAffinityProcFile, err)
+		}
+	}()
 
 	fi, err := os.OpenFile(podIrqBannedCPUsFile, os.O_CREATE|os.O_WRONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
-	fi.Close()
-	defer os.Remove(podIrqBannedCPUsFile)
+	g.Expect(fi.Close()).NotTo(HaveOccurred())
+	defer func() {
+		if err := os.Remove(podIrqBannedCPUsFile); err != nil {
+			t.Errorf("error closing the file %s: %v", podIrqBannedCPUsFile, err)
+		}
+	}()
 
 	err = SetIRQLoadBalancing("1-2", false, irqSmpAffinityProcFile, podIrqBannedCPUsFile)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -94,14 +111,14 @@ func TestResetIRQLoadBalancing(t *testing.T) {
 	fa, err = os.OpenFile(irqSmpAffinityProcFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err := ioutil.ReadAll(fa)
-	fa.Close()
+	g.Expect(fa.Close()).NotTo(HaveOccurred())
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("00ffffff,ffffffff"))
 
 	fb, err := os.OpenFile(podIrqBannedCPUsFile, os.O_RDONLY, 0644)
 	g.Expect(err).NotTo(HaveOccurred())
 	rawBytes, err = ioutil.ReadAll(fb)
-	fb.Close()
+	g.Expect(fb.Close()).NotTo(HaveOccurred())
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(string(rawBytes)).To(Equal("ff000000,00000000"))
 }

@@ -31,7 +31,7 @@ const (
 	cpuManagerStateFileName string = "cpu_manager_state"
 )
 
-// CPUManagerService APIs for retriving assigned cpus
+// CPUManagerService APIs for retrieving assigned cpus
 type CPUManagerService interface {
 	GetAssignedCpus(podUID string) (string, error)
 	GetAssignedCpusFromCache(podUID string) string
@@ -80,9 +80,8 @@ func (cs *cpuState) getCPUsFromCheckpointV2(podUID string) string {
 			cpus = cpus + "," + cpu
 		}
 		return strings.TrimPrefix(cpus, ",")
-	} else {
-		return ""
 	}
+	return ""
 }
 
 func newCPUManagerCheckpointV1() *state.CPUManagerCheckpointV1 {
@@ -101,7 +100,6 @@ func (cs *cpuState) restoreState() error {
 	checkpointV1 := newCPUManagerCheckpointV1()
 	checkpointV2 := newCPUManagerCheckpointV2()
 	if err := cs.checkpoint.GetCheckpoint(cpuManagerStateFileName, checkpointV1); err != nil {
-		checkpointV1 = &state.CPUManagerCheckpointV1{}
 		if err = cs.checkpoint.GetCheckpoint(cpuManagerStateFileName, checkpointV2); err == nil {
 			if checkpointV2.PolicyName != string(cpumanager.PolicyStatic) {
 				logrus.Infof("cpu manager policy is not static. no dedicated cpus")

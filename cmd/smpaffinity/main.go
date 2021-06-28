@@ -43,7 +43,6 @@ const (
 )
 
 func main() {
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM,
 		syscall.SIGQUIT)
@@ -79,7 +78,6 @@ func main() {
 			mutex.Lock()
 			handleAddPod(obj.(*v1.Pod), cms)
 			mutex.Unlock()
-
 		},
 		// don't need to handle update event.
 		// resources (cpu) can't be edited.

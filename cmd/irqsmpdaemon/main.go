@@ -37,7 +37,6 @@ const (
 )
 
 func main() {
-
 	podIrqBannedCPUsFile := flag.String("podfile", defaultPodIrqBannedCPUsFile, "pod irq banned cpus file")
 	irqBalanceConfigFile := flag.String("config", defaultIrqBalanceConfigFile, "irq balance config file")
 	logFile := flag.String("log", defaultLogFile, "log file")
@@ -56,7 +55,11 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	defer watcher.Close()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			logrus.Warnf("error in closing the file watcher %v", err)
+		}
+	}()
 
 	logrus.Infof("using config file %s", *podIrqBannedCPUsFile)
 
@@ -76,7 +79,6 @@ func main() {
 					if err = irq.ResetIRQBalance(*irqBalanceConfigFile, strings.TrimSpace(string(content))); err != nil {
 						logrus.Infof("irqbalance with banned cpus failed: %v", err)
 					}
-
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -122,7 +124,9 @@ func initializeConfigFile(podIrqBannedCPUsFile, irqBalanceConfigFile string) err
 		if err != nil {
 			return err
 		}
-		irqBalanceConfig.Close()
+		if err := irqBalanceConfig.Close(); err != nil {
+			return err
+		}
 		return nil
 	} else if err == nil {
 		// Always derive the banned cpu mask from irqSmpAffinityFile

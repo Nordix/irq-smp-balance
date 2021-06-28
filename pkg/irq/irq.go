@@ -14,6 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package irq contains wrapper module around cpu manager file to retrieve updated pod cpu
+// information, helper methods to derive irq affinity and banned masks, write to approproiate
+// configuration files.
 package irq
 
 import (
@@ -55,7 +58,7 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, podIrqBan
 	if err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(irqSmpAffinityFile, []byte(newIRQSMPSetting), 0o644); err != nil {
+	if err := ioutil.WriteFile(irqSmpAffinityFile, []byte(newIRQSMPSetting), 0o644); err != nil {
 		return err
 	}
 
@@ -66,7 +69,11 @@ func SetIRQLoadBalancing(cpus string, enable bool, irqSmpAffinityFile, podIrqBan
 	if err != nil {
 		return err
 	}
-	defer podIrqBannedCPUsConfig.Close()
+	defer func() {
+		if err := podIrqBannedCPUsConfig.Close(); err != nil {
+			logrus.Warnf("error closing irq banned cpu %s file %v", podIrqBannedCPUsFile, err)
+		}
+	}()
 
 	_, err = podIrqBannedCPUsConfig.WriteString(newIRQBalanceSetting)
 	if err != nil {
@@ -94,7 +101,7 @@ func updateIrqBalanceConfigFile(irqBalanceConfigFile, newIRQBalanceSetting strin
 	if !found {
 		output = output + "\n" + IrqBalanceBannedCpus + "=" + "\"" + newIRQBalanceSetting + "\"" + "\n"
 	}
-	if err = ioutil.WriteFile(irqBalanceConfigFile, []byte(output), 0644); err != nil {
+	if err := ioutil.WriteFile(irqBalanceConfigFile, []byte(output), 0644); err != nil {
 		return err
 	}
 	return nil
